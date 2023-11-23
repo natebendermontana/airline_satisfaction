@@ -11,57 +11,37 @@ library(MASS)
 library(caret)
 library(pheatmap)
 library(ROCR)
+library(MetBrewer)
+library(colorspace)
 library(dplyr)
 
 #### Setup / read in data ####
-data_path <- here("data", "airline_passenger_satisfaction.csv")
+data_path <- here("data", "df_clean.csv")
 dict_path <- here("data", "data_dictionary.csv")
 df <- read.csv(data_path)
 dict <- read.csv(dict_path) 
 
+
+# Assuming df is your dataset
+df$age_category <- cut(df$Age,
+                       breaks = c(0, 20, 40, 60, Inf),
+                       labels = c("0-20", "21-40", "41-60", "60+"),
+                       include.lowest = TRUE)
+df$age_category <- factor(df$age_category, levels = c("0-20", "21-40", "41-60", "60+"))
+
+
+c1 <- met.brewer("Paquin")
+swatchplot(c1)
+
+
+
+##########################################################
+################# Modeling ###############################
+#### Create training / testing datasets ####
+# Replace "your_data" with your dataset and "n" with the sample size
 # Set the seed for replicable results
 set.seed(123)  # You can choose any integer as the seed
 
-#### EDA ####
-# very little missing data, only 393 rows missing arrival.delay data
-skimr::skim(df)
-
-# some strong correlations to take note of
-#corrgram(sampled_data)
-colnames(df)
-
-# filter out small amount of missing data and convert all chr variables to factors
-df <- df %>%
-  filter(complete.cases(.)) %>% 
-  mutate_if(is.character, as.factor)
-
-# List of 1-5 satisfaction survey vars to be converted to factors
-selected_vars <- c(
-  "Departure.and.Arrival.Time.Convenience", 
-  "Ease.of.Online.Booking",
-  "Check.in.Service", 
-  "Online.Boarding", 
-  "Gate.Location",
-  "On.board.Service", 
-  "Seat.Comfort", 
-  "Leg.Room.Service",
-  "Cleanliness", 
-  "Food.and.Drink", 
-  "In.flight.Service",
-  "In.flight.Wifi.Service", 
-  "In.flight.Entertainment",
-  "Baggage.Handling"
-)
-
-# Convert selected variables to factors
-df <- df %>%
-  mutate(across(all_of(selected_vars), as.factor))
-
-# ensure that "Satisfied" is the reference level of the dep var, for ease of model interpretation
-df$Satisfaction <- relevel(df$Satisfaction, ref = "Satisfied")
-
-#### Create training / testing datasets ####
-# Replace "your_data" with your dataset and "n" with the sample size
 sampled_data <- df %>%
   sample_n(size = 1000)  # Change the sample size as needed
 
@@ -131,15 +111,15 @@ samp_df.test$treepred1 <- treepred1
 
 #### Calculate accuracy metrics ####
 # for the tree-based model
-tree_confusion <- confusionMatrix(samp_df.test$treepred1, samp_df.test$Satisfaction)
-tree_accuracy <- tree_confusion$overall['Accuracy']
+# tree_confusion <- confusionMatrix(samp_df.test$treepred1, samp_df.test$Satisfaction)
+# tree_accuracy <- tree_confusion$overall['Accuracy']
 
 # for the logistic regression model
 # reg_confusion <- confusionMatrix(samp_df.test$reg1_aic_pred, samp_df.test$Satisfaction)
 # reg_accuracy <- reg_confusion$overall['Accuracy']
 
 # Display accuracy metrics
-cat("Tree Model Accuracy: ", tree_accuracy, "\n")
+# cat("Tree Model Accuracy: ", tree_accuracy, "\n")
 # cat("Logistic Regression Model Accuracy: ", reg_accuracy, "\n")
 
 
